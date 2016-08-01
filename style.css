@@ -1,0 +1,61 @@
+button, div.send-scores {
+  background: #EEE;
+  border: 1px solid black;
+  border-radius: 10px;
+  font-family: sans-serif;
+  font-size: 18px;
+  margin-top: 20px;
+  padding: 5px 0;
+  width: 200px;
+  text-align: center;
+}
+
+a {
+  color: black;
+  text-decoration: none;
+}
+
+div.send-scores.disabled {
+  background: white;
+  border-color: #CCC;
+  color: #CCC;
+}
+
+  div.send-scores.disabled a {
+    color: #CCC;
+  }
+
+.player-row {
+  display: flex;
+}
+
+  .player-row label {
+    margin-right: 10px;
+    flex: 0 0 auto;
+  }
+
+  .player-row input {
+    flex: 1 1 auto;
+  }
+
+table.game {
+  margin-top: 20px;
+  text-align: center;
+  width: 100%;
+}
+  table.game caption {
+    font-weight: bold;
+    text-align: left;
+  }
+
+  table.game td {
+    border: 1px solid #CCC;
+  }
+
+    table.game td select {
+      width: 100%;
+    }
+
+      table.game td select option {
+        text-align: center;
+      }
