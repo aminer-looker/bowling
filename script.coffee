@@ -4,13 +4,13 @@ computeBallScore = (position)->
   return 0 unless position?
 
   scoreText = getScoreText position
-  score = getBasePoints scoreText
+  score = getBasePoints position
 
   if scoreText is 'X'
-    score += computeBallScore getNextBall position
-    score += computeBallScore getNextBall position, 2
+    score += getBasePoints getNextBall position
+    score += getBasePoints getNextBall position, 2
   else if scoreText is '/'
-    score += computeBallScore getNextBall position
+    score += getBasePoints getNextBall position
   else if scoreText is ' '
     return 0
 
@@ -21,11 +21,10 @@ computeFrameScore = (position)->
 
   score = 0
   score += computeBallScore game:position.game, frame:position.frame, ball:1
-  score += computeBallScore game:position.game, frame:position.frame, ball:2
-  if position.frame is 10
-    score += computeBallScore game:position.game, frame:position.frame, ball:3
+  if not (position.frame is 10 and getScoreText(game:position.game, frame:10, ball:1) is "X")
+    score += computeBallScore game:position.game, frame:position.frame, ball:2
 
-  if score > 0 and position.frame > 1
+  if hasPlayedFrame(position) and position.frame > 1
     score += computeFrameScore game:position.game, frame:position.frame - 1
 
   return score
@@ -35,7 +34,7 @@ computeGameScore = (position)->
 
   score = 0
   for frame in [1..10]
-    score += computeFrameScore game:position.game, frame:frame
+    score = Math.max score, computeFrameScore game:position.game, frame:frame
 
   return score
 
@@ -49,22 +48,29 @@ refreshScores = ->
 
 # Data Extraction ##########################################################################################
 
-getBasePoints = (scoreText)->
+getBasePoints = (position)->
+  scoreText = getScoreText position
+
+  score = 0
   switch scoreText
-    when ' ' then return 0
-    when '0' then return 0
-    when '1' then return 1
-    when '2' then return 2
-    when '3' then return 3
-    when '4' then return 4
-    when '5' then return 5
-    when '6' then return 6
-    when '7' then return 7
-    when '8' then return 8
-    when '9' then return 9
-    when '/' then return 10
-    when 'X' then return 10
-    else return 0
+    when ' ' then score = 0
+    when '0' then score = 0
+    when '1' then score = 1
+    when '2' then score = 2
+    when '3' then score = 3
+    when '4' then score = 4
+    when '5' then score = 5
+    when '6' then score = 6
+    when '7' then score = 7
+    when '8' then score = 8
+    when '9' then score = 9
+    when '/' then score = 10
+    when 'X' then score = 10
+
+  if scoreText is '/'
+    score -= getBasePoints game:position.game, frame:position.frame, ball:position.ball - 1
+
+  return score
 
 getGameCount = ->
   $(".game").length
@@ -92,6 +98,12 @@ getNextBall = (position, count=1)->
 
 getPlayerName = ->
   return $("input.player").val()
+
+hasPlayedFrame = (position)->
+  for ball in [1..3]
+    scoreText = getScoreText game:position.game, frame:position.frame, ball:1
+    return true if scoreText isnt " "
+  return false
 
 setFrameScore = (position, value)->
   value = if value is 0 then "" else value
@@ -129,14 +141,14 @@ addNewGame = ->
   $game.append $ballRow
 
   for frameIndex in [1..10]
-    for ballIndex in [1..2]
+    ballList = if frameIndex is 10 then [1..3] else [1..2]
+    for ballIndex in ballList
       $ballRow.append $("""
         <td class='ball'>
           <select class='g#{gameNumber}f#{frameIndex}b#{ballIndex}'></select>
         </td>
       """)
 
-  $ballRow.append $("<td class='ball'><select class='g#{gameNumber}f10b3'></select></td>")
   $ballRow.append $("<td class='score' rowspan='2'></td>")
 
   $frameRow = $("<tr></tr>")
@@ -152,7 +164,8 @@ addNewGame = ->
 
 addScoreSelect = (game)->
   for frame in [1..10]
-    for ball in [1..2]
+    ballList = if frame is 10 then [1..3] else [1..2]
+    for ball in ballList
       options = []
       options.push(' ')
       options.push('0')
@@ -176,26 +189,23 @@ addScoreSelect = (game)->
 
 updateSendScoresLink = ->
   player = getPlayerName()
+  date = moment().format "YYYY-MM-DD"
 
-  sql = []
+  rows = []
   for game in [1..getGameCount()]
     for frame in [1..10]
       for ball in [1..3]
         scoreText = getScoreText game:game, frame:frame, ball:ball
         continue if scoreText is ' '
 
-        sql.push "
-          insert into frames (player, game, frame, ball, score) values (
-            '#{player}', #{game}, #{frame}, #{ball}, '#{scoreText}'
-          )
-        "
+        rows.push "#{player}, #{date}, #{game}, #{frame}, #{ball}, #{scoreText}"
 
   subject = encodeURIComponent "Bowling Scores for #{player}"
-  href = "mailto:aminer@looker.com?subject=#{subject}&body=" + encodeURIComponent sql.join "\n"
+  href = "mailto:aminer@looker.com?subject=#{subject}&body=" + encodeURIComponent rows.join "\n"
   $div = $('div.send-scores')
   $link = $('div.send-scores a')
 
-  if player and sql.length
+  if player and rows.length
     $link.attr 'href', href
     $div.removeClass 'disabled'
   else
@@ -216,8 +226,9 @@ onScoreChanged = ->
 # Initialization ###########################################################################################
 
 $ ->
-  $("input.player").on "change", onPlayerChanged
   addNewGame()
   updateSendScoresLink()
 
+  $("input.player").focus()
+  $("input.player").on "change", onPlayerChanged
   $("button.add-game").on "click", addNewGame

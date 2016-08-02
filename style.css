@@ -50,10 +50,11 @@ table.game {
 
   table.game td {
     border: 1px solid #CCC;
+    overflow: hidden;
   }
 
     table.game td select {
-      width: 100%;
+      width: calc(100% + 20px);
     }
 
       table.game td select option {
