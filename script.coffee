@@ -201,7 +201,7 @@ updateSendScoresLink = ->
         rows.push "#{player}, #{date}, #{game}, #{frame}, #{ball}, #{scoreText}"
 
   subject = encodeURIComponent "Bowling Scores for #{player}"
-  href = "mailto:aminer@looker.com?subject=#{subject}&body=" + encodeURIComponent rows.join "\n"
+  href = "mailto:lloyd@looker.com?subject=#{subject}&body=" + encodeURIComponent rows.join "\n"
   $div = $('div.send-scores')
   $link = $('div.send-scores a')
 
