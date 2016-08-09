@@ -48,6 +48,20 @@ refreshScores = ->
 
 # Data Extraction ##########################################################################################
 
+gatherData = ->
+  player = getPlayerName()
+
+  rows = []
+  for game in [1..getGameCount()]
+    for frame in [1..10]
+      for ball in [1..3]
+        scoreText = getScoreText game:game, frame:frame, ball:ball
+        continue if scoreText is ' '
+
+        rows.push "#{player}, #{game}, #{frame}, #{ball}, #{scoreText}"
+  data = rows.join "\n"
+  return data
+
 getBasePoints = (position)->
   scoreText = getScoreText position
 
@@ -74,6 +88,9 @@ getBasePoints = (position)->
 
 getGameCount = ->
   $(".game").length
+
+getGameNumber = ->
+  $(".game-number").val()
 
 getScoreText = (position)->
   return ' ' unless position
@@ -112,6 +129,21 @@ setFrameScore = (position, value)->
 
 setGameScore = (position, value)->
   $("table.game-#{position.game} .score").text(value)
+
+setStatusMessage = (status, message)->
+  $message = $(".status-message")
+  $message.removeClass()
+  $message.addClass 'status-message'
+  $message.addClass status
+  $message.text message
+
+updateSendScoresButton = ->
+  player = getPlayerName()
+  data = gatherData()
+  game = getGameNumber()
+
+  $button = $('.send-scores')
+  $button.prop 'disabled', not (player and game and data)
 
 # DOM Manipulation #########################################################################################
 
@@ -187,48 +219,46 @@ addScoreSelect = (game)->
       for option in options
         $select.append $("<option value='#{option}'>#{option}</option>")
 
-updateSendScoresLink = ->
-  player = getPlayerName()
-  date = moment().format "YYYY-MM-DD"
+uploadScores = ->
+  data = gatherData()
+  console.log "attempting to send data:\n#{data}"
 
-  rows = []
-  for game in [1..getGameCount()]
-    for frame in [1..10]
-      for ball in [1..3]
-        scoreText = getScoreText game:game, frame:frame, ball:ball
-        continue if scoreText is ' '
-
-        rows.push "#{player}, #{date}, #{game}, #{frame}, #{ball}, #{scoreText}"
-
-  subject = encodeURIComponent "Bowling Scores for #{player}"
-  href = "mailto:aminer@looker.com?subject=#{subject}&body=" + encodeURIComponent rows.join "\n"
-  $div = $('div.send-scores')
-  $link = $('div.send-scores a')
-
-  if player and rows.length
-    $link.attr 'href', href
-    $div.removeClass 'disabled'
-  else
-    $div.addClass 'disabled'
-    $link.attr 'href', ''
+  $.ajax(
+    contentType: 'text/plain'
+    data: data
+    error: onUploadError
+    method: 'POST'
+    success: onUploadComplete
+    timeout: 500
+    url: 'http://10.0.0.235:2016'
+  )
 
 # Events ###################################################################################################
 
+onUploadComplete = ->
+  setStatusMessage 'success', 'Upload complete!'
+
+onUploadError = (xhr, status, error)->
+  setStatusMessage 'error', error
+
 onPlayerChanged = ->
-  updateSendScoresLink()
+  updateSendScoresButton()
   return true
 
 onScoreChanged = ->
   refreshScores()
-  updateSendScoresLink()
+  updateSendScoresButton()
   return true
+
+onSendScores = ->
+  uploadScores()
 
 # Initialization ###########################################################################################
 
 $ ->
   addNewGame()
-  updateSendScoresLink()
+  updateSendScoresButton()
 
   $("input.player").focus()
   $("input.player").on "change", onPlayerChanged
-  $("button.add-game").on "click", addNewGame
+  $("button.send-scores").on "click", onSendScores

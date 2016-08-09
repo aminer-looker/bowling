@@ -7,11 +7,23 @@
   <body>
     <div class="player-row">
       <label>Player:</label><input class="player" placeholder="player" />
+      <label>Game Number:</label><select class="game-number">
+        <option value=""></option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+        <option value="8">8</option>
+        <option value="9">9</option>
+      </select>
     </div>
 
     <div class="game-list"></div>
-    <button class="add-game">Add New Game</button>
-    <div class="send-scores"><a href="">Send Scores</a></div>
+    <button class="send-scores">Send Scores</button>
+    <div class="status-message"></div>
 
     <script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
     <script src="http://coffeescript.org/extras/coffee-script.js"></script>
