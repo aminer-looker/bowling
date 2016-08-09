@@ -30,12 +30,19 @@ div.send-scores.disabled {
 }
 
   .player-row label {
-    margin-right: 10px;
     flex: 0 0 auto;
   }
 
   .player-row input {
     flex: 1 1 auto;
+  }
+
+  .player-row select {
+    flex: 1 1 auto;
+  }
+
+  :not(:first-child) {
+    margin-left: 10px;
   }
 
 table.game {
@@ -60,3 +67,15 @@ table.game {
       table.game td select option {
         text-align: center;
       }
+
+div.status-message {
+  margin-top: 20px;
+}
+
+  div.status-message.success {
+    color: green;
+  }
+
+  div.status-message.error {
+    color: red;
+  }
