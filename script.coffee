@@ -229,7 +229,7 @@ uploadScores = ->
     error: onUploadError
     method: 'POST'
     success: onUploadComplete
-    timeout: 500
+    timeout: 5000
     url: 'http://bowling2.looker.com'
   )
 
