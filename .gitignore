@@ -1,2 +1,7 @@
 .DS_Store
 *.zip
+lookerdata-a86c2ee1f4ac.json
+*.iml
+node_modules/*
+.idea/*
+npm-debug.log
