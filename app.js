@@ -6,7 +6,7 @@ var google = require('googleapis');
 var googleKey = require('./lookerdata-a86c2ee1f4ac.json');
 
 //Lets define a port we want to listen to
-const PORT=80;
+const PORT=2016;
 
 function send(response, statusCode, contentType, body) {
   response.statusCode = statusCode;
@@ -57,6 +57,8 @@ function handleRequest(request, response){
       {
         var jsonData = lines.map(function (line) {
           var fields = line.split(',');
+          if (fields.length < 5)
+            throw Error("missing fields")
           var row = {
             json: {
               bowler: fields[0],
