@@ -20,45 +20,42 @@ computeFrameScore = (position)->
   return 0 unless position?
 
   score = 0
-  score += computeBallScore game:position.game, frame:position.frame, ball:1
-  if not (position.frame is 10 and getScoreText(game:position.game, frame:10, ball:2) is "X")
-    score += computeBallScore game:position.game, frame:position.frame, ball:2
+  score += computeBallScore frame:position.frame, ball:1
+  if not (position.frame is 10 and getScoreText(frame:10, ball:2) is "X")
+    score += computeBallScore frame:position.frame, ball:2
 
   if hasPlayedFrame(position) and position.frame > 1
-    score += computeFrameScore game:position.game, frame:position.frame - 1
+    score += computeFrameScore frame:position.frame - 1
 
   return score
 
 computeGameScore = (position)->
-  return 0 unless position?
-
   score = 0
   for frame in [1..10]
-    score = Math.max score, computeFrameScore game:position.game, frame:frame
+    score = Math.max score, computeFrameScore frame:frame
 
   return score
 
 refreshScores = ->
-  for game in [1..getGameCount()]
-    setGameScore game:game, computeGameScore game:game
+  setGameScore computeGameScore()
 
-    for frame in [1..10]
-      position = game:game, frame:frame
-      setFrameScore position, computeFrameScore position
+  for frame in [1..10]
+    position = frame:frame
+    setFrameScore position, computeFrameScore position
 
 # Data Extraction ##########################################################################################
 
 gatherData = ->
   player = getPlayerName()
+  game = getGameNumber()
 
   rows = []
-  for game in [1..getGameCount()]
-    for frame in [1..10]
-      for ball in [1..3]
-        scoreText = getScoreText game:game, frame:frame, ball:ball
-        continue if scoreText is ' '
+  for frame in [1..10]
+    for ball in [1..3]
+      scoreText = getScoreText frame:frame, ball:ball
+      continue if scoreText is ' '
 
-        rows.push "#{player}, #{game}, #{frame}, #{ball}, #{scoreText}"
+      rows.push "#{player}, #{game}, #{frame}, #{ball}, #{scoreText}"
   data = rows.join "\n"
   return data
 
@@ -82,7 +79,7 @@ getBasePoints = (position)->
     when 'X' then score = 10
 
   if scoreText is '/'
-    score -= getBasePoints game:position.game, frame:position.frame, ball:position.ball - 1
+    score -= getBasePoints frame:position.frame, ball:position.ball - 1
 
   return score
 
@@ -94,12 +91,12 @@ getGameNumber = ->
 
 getScoreText = (position)->
   return ' ' unless position
-  scoreText = $("select.g#{position.game}f#{position.frame}b#{position.ball}").val()
+  scoreText = $("select.f#{position.frame}b#{position.ball}").val()
   return ' ' unless scoreText
   return scoreText
 
 getNextBall = (position, count=1)->
-  nextPosition = game:position.game, frame:position.frame, ball:position.ball
+  nextPosition = frame:position.frame, ball:position.ball
   while count > 0
     nextPosition.ball += 1
     if nextPosition.frame isnt 10 and nextPosition.ball > 2
@@ -118,53 +115,18 @@ getPlayerName = ->
 
 hasPlayedFrame = (position)->
   for ball in [1..3]
-    scoreText = getScoreText game:position.game, frame:position.frame, ball:ball
+    scoreText = getScoreText frame:position.frame, ball:ball
     return true if scoreText isnt ' '
   return false
-
-setEnabled = (position, enabled) ->
-  $el = $("select.g#{position.game}f#{position.frame}b#{position.ball}")
-  if enabled
-    $el.removeAttr 'disabled'
-  else
-    $el.attr 'disabled', 'disabled'
-
-setFrameScore = (position, value)->
-  value = if value is 0 then "" else value
-
-  $("td.g#{position.game}f#{position.frame}").text(value)
-
-setGameScore = (position, value)->
-  $("table.game-#{position.game} .score").text(value)
-
-setBallScore = (position, text)->
-  return unless position
-  $("select.g#{position.game}f#{position.frame}b#{position.ball}").val text
-
-setStatusMessage = (status, message)->
-  $message = $(".status-message")
-  $message.removeClass()
-  $message.addClass 'status-message'
-  $message.addClass status
-  $message.text message
-
-updateSendScoresButton = ->
-  player = getPlayerName()
-  data = gatherData()
-  game = getGameNumber()
-
-  $button = $('.send-scores')
-  $button.prop 'disabled', not (player and game and data)
 
 # DOM Manipulation #########################################################################################
 
 addNewGame = ->
-  gameNumber = getGameCount() + 1
-  $game = $("<table class='game game-#{gameNumber}' cellspacing='0' cellpadding='0'></table>")
+  $game = $("<table class='game' cellspacing='0' cellpadding='0'></table>")
+  $(".game-list").empty()
   $(".game-list").append $game
 
   $game.append $("""
-    <caption>Game #{gameNumber}</caption>
     <tr class="header">
       <td colspan="2">1</td>
       <td colspan="2">2</td>
@@ -188,7 +150,7 @@ addNewGame = ->
     for ballIndex in ballList
       $ballRow.append $("""
         <td class='ball'>
-          <select class='g#{gameNumber}f#{frameIndex}b#{ballIndex}'></select>
+          <select class='f#{frameIndex}b#{ballIndex}'></select>
         </td>
       """)
 
@@ -200,12 +162,12 @@ addNewGame = ->
   for frameIndex in [1..10]
     colspan = if frameIndex is 10 then 3 else 2
     $frameRow.append("""
-      <td class='g#{gameNumber}f#{frameIndex}' colspan='#{colspan}'>&nbsp;</td>
+      <td class='f#{frameIndex}' colspan='#{colspan}'>&nbsp;</td>
     """)
 
-  addScoreSelect gameNumber
+  addScoreSelect()
 
-addScoreSelect = (game)->
+addScoreSelect = ->
   for frame in [1..10]
     ballList = if frame is 10 then [1..3] else [1..2]
     for ball in ballList
@@ -224,26 +186,66 @@ addScoreSelect = (game)->
       options.push('X') if ball is 2
       options.push('/') if ball is 2
 
-      $select = $("select.g#{game}f#{frame}b#{ball}")
+      $select = $("select.f#{frame}b#{ball}")
       $select.on 'change', onScoreChanged
 
       for option in options
         $select.append $("<option value='#{option}'>#{option}</option>")
 
+incrementGameNumber = ->
+  game = parseInt getGameNumber()
+  $(".game-number").val("#{game + 1}")
+
 refreshSelectors = ->
-  for game in [1..getGameCount()]
-    for frame in [1..10]
+  player = getPlayerName()
+  game = getGameNumber()
+
+  for frame in [1..10]
+    for ball in [1..3]
+      setEnabled {frame:frame, ball:ball}, (player and game)
+
+    priorFrame = frame - 1
+    if priorFrame > 0 and getScoreText(frame:priorFrame, ball:2) is ' '
       for ball in [1..3]
-        setEnabled {game:game, frame:frame, ball:ball}, true
+        setEnabled {frame:frame, ball:ball}, false
 
-      priorFrame = frame - 1
-      if priorFrame > 0 and getScoreText(game:game, frame:priorFrame, ball:2) is ' '
-        for ball in [1..3]
-          setEnabled {game:game, frame:frame, ball:ball}, false
+    if frame isnt 10 and getScoreText(frame:frame, ball:2) is 'X'
+      setBallScore {frame:frame, ball:1}, ' '
+      setEnabled {frame:frame, ball:1}, false
 
-      if frame isnt 10 and getScoreText(game:game, frame:frame, ball:2) is 'X'
-        setBallScore {game:game, frame:frame, ball:1}, ' '
-        setEnabled {game:game, frame:frame, ball:1}, false
+setEnabled = (position, enabled) ->
+  $el = $("select.f#{position.frame}b#{position.ball}")
+  if enabled
+    $el.removeAttr 'disabled'
+  else
+    $el.attr 'disabled', 'disabled'
+
+setFrameScore = (position, value)->
+  value = if value is 0 then "" else value
+
+  $("td.f#{position.frame}").text(value)
+
+setGameScore = (value)->
+  $("table .score").text(value)
+
+setBallScore = (position, text)->
+  return unless position
+  $("select.f#{position.frame}b#{position.ball}").val text
+
+setStatusMessage = (status, message)->
+  $message = $(".status-message")
+  $message.removeClass()
+  $message.addClass 'status-message'
+  $message.addClass status
+  $message.text message
+
+updateSendScoresButton = ->
+  player = getPlayerName()
+  data = gatherData()
+  game = getGameNumber()
+
+  $button = $('.send-scores')
+  $button.prop 'disabled', not (player and game and data)
 
 uploadScores = ->
   data = gatherData()
@@ -265,10 +267,12 @@ uploadScores = ->
 
 onGameNumberChanged = ->
   updateSendScoresButton()
+  refreshSelectors()
   return true
 
 onPlayerChanged = ->
   updateSendScoresButton()
+  refreshSelectors()
   return true
 
 onScoreChanged = ->
@@ -282,6 +286,9 @@ onSendScores = ->
 
 onUploadComplete = ->
   setStatusMessage 'success', 'Upload complete!'
+  addNewGame()
+  incrementGameNumber()
+  updateSendScoresButton()
 
 onUploadError = (xhr, status, error)->
   setStatusMessage 'error', error
