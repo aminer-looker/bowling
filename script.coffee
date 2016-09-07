@@ -21,7 +21,7 @@ computeFrameScore = (position)->
 
   score = 0
   score += computeBallScore game:position.game, frame:position.frame, ball:1
-  if not (position.frame is 10 and getScoreText(game:position.game, frame:10, ball:1) is "X")
+  if not (position.frame is 10 and getScoreText(game:position.game, frame:10, ball:2) is "X")
     score += computeBallScore game:position.game, frame:position.frame, ball:2
 
   if hasPlayedFrame(position) and position.frame > 1
@@ -118,9 +118,16 @@ getPlayerName = ->
 
 hasPlayedFrame = (position)->
   for ball in [1..3]
-    scoreText = getScoreText game:position.game, frame:position.frame, ball:1
-    return true if scoreText isnt " "
+    scoreText = getScoreText game:position.game, frame:position.frame, ball:ball
+    return true if scoreText isnt ' '
   return false
+
+setEnabled = (position, enabled) ->
+  $el = $("select.g#{position.game}f#{position.frame}b#{position.ball}")
+  if enabled
+    $el.removeAttr 'disabled'
+  else
+    $el.attr 'disabled', 'disabled'
 
 setFrameScore = (position, value)->
   value = if value is 0 then "" else value
@@ -129,6 +136,10 @@ setFrameScore = (position, value)->
 
 setGameScore = (position, value)->
   $("table.game-#{position.game} .score").text(value)
+
+setBallScore = (position, text)->
+  return unless position
+  $("select.g#{position.game}f#{position.frame}b#{position.ball}").val text
 
 setStatusMessage = (status, message)->
   $message = $(".status-message")
@@ -210,7 +221,7 @@ addScoreSelect = (game)->
       options.push('7')
       options.push('8')
       options.push('9')
-      options.push('X') if ball is 1
+      options.push('X') if ball is 2
       options.push('/') if ball is 2
 
       $select = $("select.g#{game}f#{frame}b#{ball}")
@@ -219,9 +230,26 @@ addScoreSelect = (game)->
       for option in options
         $select.append $("<option value='#{option}'>#{option}</option>")
 
+refreshSelectors = ->
+  for game in [1..getGameCount()]
+    for frame in [1..10]
+      for ball in [1..3]
+        setEnabled {game:game, frame:frame, ball:ball}, true
+
+      priorFrame = frame - 1
+      if priorFrame > 0 and getScoreText(game:game, frame:priorFrame, ball:2) is ' '
+        for ball in [1..3]
+          setEnabled {game:game, frame:frame, ball:ball}, false
+
+      if frame isnt 10 and getScoreText(game:game, frame:frame, ball:2) is 'X'
+        setBallScore {game:game, frame:frame, ball:1}, ' '
+        setEnabled {game:game, frame:frame, ball:1}, false
+
 uploadScores = ->
   data = gatherData()
   console.log "attempting to send data:\n#{data}"
+
+  # setTimeout onUploadComplete, 500
 
   $.ajax(
     contentType: 'text/plain'
@@ -235,17 +263,16 @@ uploadScores = ->
 
 # Events ###################################################################################################
 
-onUploadComplete = ->
-  setStatusMessage 'success', 'Upload complete!'
-
-onUploadError = (xhr, status, error)->
-  setStatusMessage 'error', error
+onGameNumberChanged = ->
+  updateSendScoresButton()
+  return true
 
 onPlayerChanged = ->
   updateSendScoresButton()
   return true
 
 onScoreChanged = ->
+  refreshSelectors()
   refreshScores()
   updateSendScoresButton()
   return true
@@ -253,12 +280,20 @@ onScoreChanged = ->
 onSendScores = ->
   uploadScores()
 
+onUploadComplete = ->
+  setStatusMessage 'success', 'Upload complete!'
+
+onUploadError = (xhr, status, error)->
+  setStatusMessage 'error', error
+
 # Initialization ###########################################################################################
 
 $ ->
   addNewGame()
+  refreshSelectors()
   updateSendScoresButton()
 
   $("input.player").focus()
   $("input.player").on "change", onPlayerChanged
+  $(".game-number").on "change", onGameNumberChanged
   $("button.send-scores").on "click", onSendScores
